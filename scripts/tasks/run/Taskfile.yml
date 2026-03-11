@@ -1,0 +1,14 @@
+version: 3
+
+tasks:
+  rpc-run:
+    desc: "运行已编译的 RPC 服务"
+    deps: [":base:clear", ":build:bin"]
+    cmds:
+      - ./data/rpc/rpc
+
+  rpc-dev:
+    desc: "开发模式运行 RPC 服务（使用 go run）"
+    deps: [":base:clear"]
+    cmds:
+      - go run ./cmd/rpc

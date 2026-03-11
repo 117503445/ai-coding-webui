@@ -1,0 +1,21 @@
+version: 3
+
+tasks:
+  bin:
+    desc: "编译构建二进制文件"
+    deps: [":base:clear"]
+    sources:
+      - ./cmd/**
+      - ./internal/**
+      - ./pkg/**
+      - ./scripts/script/**
+      - ./scripts/tasks/**
+      - ./go.mod
+      - ./go.sum
+      - ./buf.yaml
+      - ./buf.gen.yaml
+      - ./Taskfile.yml
+    generates:
+      - ./data/rpc/rpc
+    cmds:
+      - cd ./scripts/script && go run . build

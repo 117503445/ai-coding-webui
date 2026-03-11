@@ -1,0 +1,16 @@
+version: 3
+
+tasks:
+  clear:
+    desc: "清空终端屏幕"
+    internal: true
+    silent: true
+    run: once
+    cmds:
+      - clear || true
+
+  default:
+    desc: "默认任务：运行 RPC 服务"
+    deps: ["clear"]
+    cmds:
+      - task: run:rpc-run
