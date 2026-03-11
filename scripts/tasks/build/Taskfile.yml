@@ -10,6 +10,11 @@ tasks:
       - ./pkg/**
       - ./scripts/script/**
       - ./scripts/tasks/**
+      - ./fe/src/**
+      - ./fe/package.json
+      - ./fe/vite.config.ts
+      - ./fe/tsconfig*.json
+      - ./fe/index.html
       - ./go.mod
       - ./go.sum
       - ./buf.yaml

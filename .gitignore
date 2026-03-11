@@ -34,3 +34,7 @@ go.work.sum
 p.md
 data
 .task
+cmd/rpc/frontend_dist
+
+/rpc
+__pycache__

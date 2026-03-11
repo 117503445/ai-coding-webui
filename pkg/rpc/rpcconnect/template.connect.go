@@ -21,8 +21,8 @@ import (
 const _ = connect.IsAtLeastVersion1_13_0
 
 const (
-	// TemplateServiceName is the fully-qualified name of the TemplateService service.
-	TemplateServiceName = "pkg.rpc.TemplateService"
+	// ClaudeServiceName is the fully-qualified name of the ClaudeService service.
+	ClaudeServiceName = "pkg.rpc.ClaudeService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -33,76 +33,132 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// TemplateServiceHealthzProcedure is the fully-qualified name of the TemplateService's Healthz RPC.
-	TemplateServiceHealthzProcedure = "/pkg.rpc.TemplateService/Healthz"
+	// ClaudeServiceHealthzProcedure is the fully-qualified name of the ClaudeService's Healthz RPC.
+	ClaudeServiceHealthzProcedure = "/pkg.rpc.ClaudeService/Healthz"
+	// ClaudeServiceGetStatusProcedure is the fully-qualified name of the ClaudeService's GetStatus RPC.
+	ClaudeServiceGetStatusProcedure = "/pkg.rpc.ClaudeService/GetStatus"
+	// ClaudeServiceAbortProcedure is the fully-qualified name of the ClaudeService's Abort RPC.
+	ClaudeServiceAbortProcedure = "/pkg.rpc.ClaudeService/Abort"
 )
 
-// TemplateServiceClient is a client for the pkg.rpc.TemplateService service.
-type TemplateServiceClient interface {
+// ClaudeServiceClient is a client for the pkg.rpc.ClaudeService service.
+type ClaudeServiceClient interface {
 	Healthz(context.Context, *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error)
+	GetStatus(context.Context, *connect.Request[rpc.GetStatusRequest]) (*connect.Response[rpc.ApiResponse], error)
+	Abort(context.Context, *connect.Request[rpc.AbortRequest]) (*connect.Response[rpc.ApiResponse], error)
 }
 
-// NewTemplateServiceClient constructs a client for the pkg.rpc.TemplateService service. By default,
-// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
-// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
-// or connect.WithGRPCWeb() options.
+// NewClaudeServiceClient constructs a client for the pkg.rpc.ClaudeService service. By default, it
+// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
 //
 // The URL supplied here should be the base URL for the Connect or gRPC server (for example,
 // http://api.acme.com or https://acme.com/grpc).
-func NewTemplateServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) TemplateServiceClient {
+func NewClaudeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ClaudeServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	templateServiceMethods := rpc.File_pkg_rpc_template_proto.Services().ByName("TemplateService").Methods()
-	return &templateServiceClient{
+	claudeServiceMethods := rpc.File_pkg_rpc_template_proto.Services().ByName("ClaudeService").Methods()
+	return &claudeServiceClient{
 		healthz: connect.NewClient[rpc.HealthzRequest, rpc.ApiResponse](
 			httpClient,
-			baseURL+TemplateServiceHealthzProcedure,
-			connect.WithSchema(templateServiceMethods.ByName("Healthz")),
+			baseURL+ClaudeServiceHealthzProcedure,
+			connect.WithSchema(claudeServiceMethods.ByName("Healthz")),
+			connect.WithClientOptions(opts...),
+		),
+		getStatus: connect.NewClient[rpc.GetStatusRequest, rpc.ApiResponse](
+			httpClient,
+			baseURL+ClaudeServiceGetStatusProcedure,
+			connect.WithSchema(claudeServiceMethods.ByName("GetStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		abort: connect.NewClient[rpc.AbortRequest, rpc.ApiResponse](
+			httpClient,
+			baseURL+ClaudeServiceAbortProcedure,
+			connect.WithSchema(claudeServiceMethods.ByName("Abort")),
 			connect.WithClientOptions(opts...),
 		),
 	}
 }
 
-// templateServiceClient implements TemplateServiceClient.
-type templateServiceClient struct {
-	healthz *connect.Client[rpc.HealthzRequest, rpc.ApiResponse]
+// claudeServiceClient implements ClaudeServiceClient.
+type claudeServiceClient struct {
+	healthz   *connect.Client[rpc.HealthzRequest, rpc.ApiResponse]
+	getStatus *connect.Client[rpc.GetStatusRequest, rpc.ApiResponse]
+	abort     *connect.Client[rpc.AbortRequest, rpc.ApiResponse]
 }
 
-// Healthz calls pkg.rpc.TemplateService.Healthz.
-func (c *templateServiceClient) Healthz(ctx context.Context, req *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error) {
+// Healthz calls pkg.rpc.ClaudeService.Healthz.
+func (c *claudeServiceClient) Healthz(ctx context.Context, req *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error) {
 	return c.healthz.CallUnary(ctx, req)
 }
 
-// TemplateServiceHandler is an implementation of the pkg.rpc.TemplateService service.
-type TemplateServiceHandler interface {
-	Healthz(context.Context, *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error)
+// GetStatus calls pkg.rpc.ClaudeService.GetStatus.
+func (c *claudeServiceClient) GetStatus(ctx context.Context, req *connect.Request[rpc.GetStatusRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	return c.getStatus.CallUnary(ctx, req)
 }
 
-// NewTemplateServiceHandler builds an HTTP handler from the service implementation. It returns the
+// Abort calls pkg.rpc.ClaudeService.Abort.
+func (c *claudeServiceClient) Abort(ctx context.Context, req *connect.Request[rpc.AbortRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	return c.abort.CallUnary(ctx, req)
+}
+
+// ClaudeServiceHandler is an implementation of the pkg.rpc.ClaudeService service.
+type ClaudeServiceHandler interface {
+	Healthz(context.Context, *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error)
+	GetStatus(context.Context, *connect.Request[rpc.GetStatusRequest]) (*connect.Response[rpc.ApiResponse], error)
+	Abort(context.Context, *connect.Request[rpc.AbortRequest]) (*connect.Response[rpc.ApiResponse], error)
+}
+
+// NewClaudeServiceHandler builds an HTTP handler from the service implementation. It returns the
 // path on which to mount the handler and the handler itself.
 //
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
-func NewTemplateServiceHandler(svc TemplateServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	templateServiceMethods := rpc.File_pkg_rpc_template_proto.Services().ByName("TemplateService").Methods()
-	templateServiceHealthzHandler := connect.NewUnaryHandler(
-		TemplateServiceHealthzProcedure,
+func NewClaudeServiceHandler(svc ClaudeServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	claudeServiceMethods := rpc.File_pkg_rpc_template_proto.Services().ByName("ClaudeService").Methods()
+	claudeServiceHealthzHandler := connect.NewUnaryHandler(
+		ClaudeServiceHealthzProcedure,
 		svc.Healthz,
-		connect.WithSchema(templateServiceMethods.ByName("Healthz")),
+		connect.WithSchema(claudeServiceMethods.ByName("Healthz")),
 		connect.WithHandlerOptions(opts...),
 	)
-	return "/pkg.rpc.TemplateService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	claudeServiceGetStatusHandler := connect.NewUnaryHandler(
+		ClaudeServiceGetStatusProcedure,
+		svc.GetStatus,
+		connect.WithSchema(claudeServiceMethods.ByName("GetStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	claudeServiceAbortHandler := connect.NewUnaryHandler(
+		ClaudeServiceAbortProcedure,
+		svc.Abort,
+		connect.WithSchema(claudeServiceMethods.ByName("Abort")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/pkg.rpc.ClaudeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case TemplateServiceHealthzProcedure:
-			templateServiceHealthzHandler.ServeHTTP(w, r)
+		case ClaudeServiceHealthzProcedure:
+			claudeServiceHealthzHandler.ServeHTTP(w, r)
+		case ClaudeServiceGetStatusProcedure:
+			claudeServiceGetStatusHandler.ServeHTTP(w, r)
+		case ClaudeServiceAbortProcedure:
+			claudeServiceAbortHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
 	})
 }
 
-// UnimplementedTemplateServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedTemplateServiceHandler struct{}
+// UnimplementedClaudeServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedClaudeServiceHandler struct{}
 
-func (UnimplementedTemplateServiceHandler) Healthz(context.Context, *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pkg.rpc.TemplateService.Healthz is not implemented"))
+func (UnimplementedClaudeServiceHandler) Healthz(context.Context, *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pkg.rpc.ClaudeService.Healthz is not implemented"))
+}
+
+func (UnimplementedClaudeServiceHandler) GetStatus(context.Context, *connect.Request[rpc.GetStatusRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pkg.rpc.ClaudeService.GetStatus is not implemented"))
+}
+
+func (UnimplementedClaudeServiceHandler) Abort(context.Context, *connect.Request[rpc.AbortRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("pkg.rpc.ClaudeService.Abort is not implemented"))
 }

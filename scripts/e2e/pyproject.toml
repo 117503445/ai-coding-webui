@@ -1,0 +1,12 @@
+[project]
+name = "e2e"
+version = "0.1.0"
+description = "E2E tests for Claude Code WebUI using Playwright"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "playwright>=1.52",
+]
+
+[tool.uv]
+dev-dependencies = []

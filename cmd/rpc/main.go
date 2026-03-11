@@ -35,7 +35,15 @@ func main() {
 		Str("BuildDir", buildinfo.BuildDir).
 		Msg("build info")
 
-	if err := ListenAndServe(ctx, port); err != nil {
+	workDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get working directory")
+	}
+
+	claude := NewClaudeManager(workDir)
+	log.Ctx(ctx).Info().Str("workDir", workDir).Msg("claude manager initialized")
+
+	if err := ListenAndServe(ctx, port, claude); err != nil {
 		log.Ctx(ctx).Fatal().Err(err).Msg("failed to serve")
 	}
 }

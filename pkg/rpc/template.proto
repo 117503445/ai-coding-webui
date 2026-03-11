@@ -10,6 +10,8 @@ message ApiResponse {
 
   oneof payload {
     HealthzResponse healthz = 3;
+    GetStatusResponse get_status = 4;
+    AbortResponse abort = 5;
   }
 }
 
@@ -20,6 +22,22 @@ message HealthzResponse {
   string request_id = 2;
 }
 
-service TemplateService {
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  string status = 1;
+  string detail = 2;
+  string session_id = 3;
+}
+
+message AbortRequest {}
+
+message AbortResponse {
+  bool success = 1;
+}
+
+service ClaudeService {
   rpc Healthz(HealthzRequest) returns (ApiResponse);
+  rpc GetStatus(GetStatusRequest) returns (ApiResponse);
+  rpc Abort(AbortRequest) returns (ApiResponse);
 }

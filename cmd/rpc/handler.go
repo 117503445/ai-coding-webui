@@ -39,10 +39,12 @@ func NewCtxInterceptor() connect.UnaryInterceptorFunc {
 	}
 }
 
-type Server struct{}
+type Server struct {
+	claude *ClaudeManager
+}
 
-func NewServer() *Server {
-	return &Server{}
+func NewServer(claude *ClaudeManager) *Server {
+	return &Server{claude: claude}
 }
 
 func (s *Server) Healthz(ctx context.Context, _ *connect.Request[rpc.HealthzRequest]) (*connect.Response[rpc.ApiResponse], error) {
@@ -60,4 +62,34 @@ func (s *Server) Healthz(ctx context.Context, _ *connect.Request[rpc.HealthzRequ
 	return resp, nil
 }
 
-var _ rpcconnect.TemplateServiceHandler = (*Server)(nil)
+func (s *Server) GetStatus(ctx context.Context, _ *connect.Request[rpc.GetStatusRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	st := s.claude.GetStatus()
+	resp := connect.NewResponse(&rpc.ApiResponse{
+		Code:    0,
+		Message: "success",
+		Payload: &rpc.ApiResponse_GetStatus{
+			GetStatus: &rpc.GetStatusResponse{
+				Status:    st.Status,
+				Detail:    st.Detail,
+				SessionId: st.SessionID,
+			},
+		},
+	})
+	return resp, nil
+}
+
+func (s *Server) Abort(ctx context.Context, _ *connect.Request[rpc.AbortRequest]) (*connect.Response[rpc.ApiResponse], error) {
+	success := s.claude.Abort()
+	resp := connect.NewResponse(&rpc.ApiResponse{
+		Code:    0,
+		Message: "success",
+		Payload: &rpc.ApiResponse_Abort{
+			Abort: &rpc.AbortResponse{
+				Success: success,
+			},
+		},
+	})
+	return resp, nil
+}
+
+var _ rpcconnect.ClaudeServiceHandler = (*Server)(nil)

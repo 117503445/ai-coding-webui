@@ -19,6 +19,24 @@
   }
 }
 
+.prose pre {
+  margin: 0;
+}
+
+.prose code {
+  font-size: 0.8em;
+}
+
+.prose :where(p):not(:where([class~="not-prose"] *)) {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
 /*
  * Light Tech Theme - 浅色科技感主题
  * 使用青色(Cyan)和天蓝色(Sky Blue)作为主色调

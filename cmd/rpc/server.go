@@ -12,15 +12,21 @@ import (
 	"github.com/117503445/ai-coding-webui/pkg/rpc/rpcconnect"
 )
 
-func ListenAndServe(ctx context.Context, port string) error {
+func ListenAndServe(ctx context.Context, port string, claude *ClaudeManager) error {
 	mux := http.NewServeMux()
-	server := NewServer()
+	server := NewServer(claude)
 
-	path, handler := rpcconnect.NewTemplateServiceHandler(
+	path, handler := rpcconnect.NewClaudeServiceHandler(
 		server,
 		connect.WithInterceptors(NewCtxInterceptor()),
 	)
 	mux.Handle(path, handler)
+
+	wsHandler := NewWSHandler(claude)
+	mux.Handle("/ws", wsHandler)
+
+	feHandler := frontendHandler()
+	mux.Handle("/", feHandler)
 
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},

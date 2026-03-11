@@ -28,6 +28,8 @@ type ApiResponse struct {
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*ApiResponse_Healthz
+	//	*ApiResponse_GetStatus
+	//	*ApiResponse_Abort
 	Payload       isApiResponse_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -93,6 +95,24 @@ func (x *ApiResponse) GetHealthz() *HealthzResponse {
 	return nil
 }
 
+func (x *ApiResponse) GetGetStatus() *GetStatusResponse {
+	if x != nil {
+		if x, ok := x.Payload.(*ApiResponse_GetStatus); ok {
+			return x.GetStatus
+		}
+	}
+	return nil
+}
+
+func (x *ApiResponse) GetAbort() *AbortResponse {
+	if x != nil {
+		if x, ok := x.Payload.(*ApiResponse_Abort); ok {
+			return x.Abort
+		}
+	}
+	return nil
+}
+
 type isApiResponse_Payload interface {
 	isApiResponse_Payload()
 }
@@ -101,7 +121,19 @@ type ApiResponse_Healthz struct {
 	Healthz *HealthzResponse `protobuf:"bytes,3,opt,name=healthz,proto3,oneof"`
 }
 
+type ApiResponse_GetStatus struct {
+	GetStatus *GetStatusResponse `protobuf:"bytes,4,opt,name=get_status,json=getStatus,proto3,oneof"`
+}
+
+type ApiResponse_Abort struct {
+	Abort *AbortResponse `protobuf:"bytes,5,opt,name=abort,proto3,oneof"`
+}
+
 func (*ApiResponse_Healthz) isApiResponse_Payload() {}
+
+func (*ApiResponse_GetStatus) isApiResponse_Payload() {}
+
+func (*ApiResponse_Abort) isApiResponse_Payload() {}
 
 type HealthzRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -191,23 +223,213 @@ func (x *HealthzResponse) GetRequestId() string {
 	return ""
 }
 
+type GetStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStatusRequest) Reset() {
+	*x = GetStatusRequest{}
+	mi := &file_pkg_rpc_template_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStatusRequest) ProtoMessage() {}
+
+func (x *GetStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_rpc_template_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetStatusRequest) Descriptor() ([]byte, []int) {
+	return file_pkg_rpc_template_proto_rawDescGZIP(), []int{3}
+}
+
+type GetStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	Detail        string                 `protobuf:"bytes,2,opt,name=detail,proto3" json:"detail,omitempty"`
+	SessionId     string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStatusResponse) Reset() {
+	*x = GetStatusResponse{}
+	mi := &file_pkg_rpc_template_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStatusResponse) ProtoMessage() {}
+
+func (x *GetStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_rpc_template_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetStatusResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_rpc_template_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetStatusResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetStatusResponse) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *GetStatusResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type AbortRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AbortRequest) Reset() {
+	*x = AbortRequest{}
+	mi := &file_pkg_rpc_template_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AbortRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AbortRequest) ProtoMessage() {}
+
+func (x *AbortRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_rpc_template_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AbortRequest.ProtoReflect.Descriptor instead.
+func (*AbortRequest) Descriptor() ([]byte, []int) {
+	return file_pkg_rpc_template_proto_rawDescGZIP(), []int{5}
+}
+
+type AbortResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AbortResponse) Reset() {
+	*x = AbortResponse{}
+	mi := &file_pkg_rpc_template_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AbortResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AbortResponse) ProtoMessage() {}
+
+func (x *AbortResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_rpc_template_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AbortResponse.ProtoReflect.Descriptor instead.
+func (*AbortResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_rpc_template_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AbortResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_pkg_rpc_template_proto protoreflect.FileDescriptor
 
 const file_pkg_rpc_template_proto_rawDesc = "" +
 	"\n" +
-	"\x16pkg/rpc/template.proto\x12\apkg.rpc\"|\n" +
+	"\x16pkg/rpc/template.proto\x12\apkg.rpc\"\xe9\x01\n" +
 	"\vApiResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x03R\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x124\n" +
-	"\ahealthz\x18\x03 \x01(\v2\x18.pkg.rpc.HealthzResponseH\x00R\ahealthzB\t\n" +
+	"\ahealthz\x18\x03 \x01(\v2\x18.pkg.rpc.HealthzResponseH\x00R\ahealthz\x12;\n" +
+	"\n" +
+	"get_status\x18\x04 \x01(\v2\x1a.pkg.rpc.GetStatusResponseH\x00R\tgetStatus\x12.\n" +
+	"\x05abort\x18\x05 \x01(\v2\x16.pkg.rpc.AbortResponseH\x00R\x05abortB\t\n" +
 	"\apayload\"\x10\n" +
 	"\x0eHealthzRequest\"J\n" +
 	"\x0fHealthzResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x1d\n" +
 	"\n" +
-	"request_id\x18\x02 \x01(\tR\trequestId2K\n" +
-	"\x0fTemplateService\x128\n" +
-	"\aHealthz\x12\x17.pkg.rpc.HealthzRequest\x1a\x14.pkg.rpc.ApiResponseB2Z0github.com/117503445/ai-coding-webui/pkg/rpc;rpcb\x06proto3"
+	"request_id\x18\x02 \x01(\tR\trequestId\"\x12\n" +
+	"\x10GetStatusRequest\"b\n" +
+	"\x11GetStatusResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x16\n" +
+	"\x06detail\x18\x02 \x01(\tR\x06detail\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x03 \x01(\tR\tsessionId\"\x0e\n" +
+	"\fAbortRequest\")\n" +
+	"\rAbortResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xbd\x01\n" +
+	"\rClaudeService\x128\n" +
+	"\aHealthz\x12\x17.pkg.rpc.HealthzRequest\x1a\x14.pkg.rpc.ApiResponse\x12<\n" +
+	"\tGetStatus\x12\x19.pkg.rpc.GetStatusRequest\x1a\x14.pkg.rpc.ApiResponse\x124\n" +
+	"\x05Abort\x12\x15.pkg.rpc.AbortRequest\x1a\x14.pkg.rpc.ApiResponseB2Z0github.com/117503445/ai-coding-webui/pkg/rpc;rpcb\x06proto3"
 
 var (
 	file_pkg_rpc_template_proto_rawDescOnce sync.Once
@@ -221,21 +443,31 @@ func file_pkg_rpc_template_proto_rawDescGZIP() []byte {
 	return file_pkg_rpc_template_proto_rawDescData
 }
 
-var file_pkg_rpc_template_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_pkg_rpc_template_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_pkg_rpc_template_proto_goTypes = []any{
-	(*ApiResponse)(nil),     // 0: pkg.rpc.ApiResponse
-	(*HealthzRequest)(nil),  // 1: pkg.rpc.HealthzRequest
-	(*HealthzResponse)(nil), // 2: pkg.rpc.HealthzResponse
+	(*ApiResponse)(nil),       // 0: pkg.rpc.ApiResponse
+	(*HealthzRequest)(nil),    // 1: pkg.rpc.HealthzRequest
+	(*HealthzResponse)(nil),   // 2: pkg.rpc.HealthzResponse
+	(*GetStatusRequest)(nil),  // 3: pkg.rpc.GetStatusRequest
+	(*GetStatusResponse)(nil), // 4: pkg.rpc.GetStatusResponse
+	(*AbortRequest)(nil),      // 5: pkg.rpc.AbortRequest
+	(*AbortResponse)(nil),     // 6: pkg.rpc.AbortResponse
 }
 var file_pkg_rpc_template_proto_depIdxs = []int32{
 	2, // 0: pkg.rpc.ApiResponse.healthz:type_name -> pkg.rpc.HealthzResponse
-	1, // 1: pkg.rpc.TemplateService.Healthz:input_type -> pkg.rpc.HealthzRequest
-	0, // 2: pkg.rpc.TemplateService.Healthz:output_type -> pkg.rpc.ApiResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 1: pkg.rpc.ApiResponse.get_status:type_name -> pkg.rpc.GetStatusResponse
+	6, // 2: pkg.rpc.ApiResponse.abort:type_name -> pkg.rpc.AbortResponse
+	1, // 3: pkg.rpc.ClaudeService.Healthz:input_type -> pkg.rpc.HealthzRequest
+	3, // 4: pkg.rpc.ClaudeService.GetStatus:input_type -> pkg.rpc.GetStatusRequest
+	5, // 5: pkg.rpc.ClaudeService.Abort:input_type -> pkg.rpc.AbortRequest
+	0, // 6: pkg.rpc.ClaudeService.Healthz:output_type -> pkg.rpc.ApiResponse
+	0, // 7: pkg.rpc.ClaudeService.GetStatus:output_type -> pkg.rpc.ApiResponse
+	0, // 8: pkg.rpc.ClaudeService.Abort:output_type -> pkg.rpc.ApiResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_pkg_rpc_template_proto_init() }
@@ -245,6 +477,8 @@ func file_pkg_rpc_template_proto_init() {
 	}
 	file_pkg_rpc_template_proto_msgTypes[0].OneofWrappers = []any{
 		(*ApiResponse_Healthz)(nil),
+		(*ApiResponse_GetStatus)(nil),
+		(*ApiResponse_Abort)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -252,7 +486,7 @@ func file_pkg_rpc_template_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_rpc_template_proto_rawDesc), len(file_pkg_rpc_template_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
