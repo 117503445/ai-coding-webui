@@ -13,3 +13,5 @@ includes:
     taskfile: ./scripts/tasks/gen
   format:
     taskfile: ./scripts/tasks/format
+  fe:
+    taskfile: ./scripts/tasks/fe

@@ -1,0 +1,20 @@
+version: 3
+
+tasks:
+  fe-dev:
+    desc: "开发模式运行前端服务"
+    deps: [":base:clear"]
+    cmds:
+      - cd fe && pnpm dev
+
+  fe-build:
+    desc: "构建前端生产版本"
+    deps: [":base:clear"]
+    cmds:
+      - cd fe && pnpm build
+
+  fe-preview:
+    desc: "预览前端生产版本"
+    deps: [":base:clear"]
+    cmds:
+      - cd fe && pnpm preview
