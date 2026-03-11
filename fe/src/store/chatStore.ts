@@ -201,6 +201,33 @@ function handleWSMessage(
   }
 }
 
+function parseContentBlocks(content: unknown[]): ContentBlock[] {
+  const blocks: ContentBlock[] = []
+  for (const item of content) {
+    const c = item as Record<string, unknown>
+    const blockType = c.type as string
+    if (blockType === 'thinking') {
+      blocks.push({ type: 'thinking', content: (c.thinking as string) || '' })
+    } else if (blockType === 'text') {
+      blocks.push({ type: 'text', content: (c.text as string) || '' })
+    } else if (blockType === 'tool_use') {
+      blocks.push({
+        type: 'tool_use',
+        id: (c.id as string) || '',
+        name: (c.name as string) || '',
+        input: typeof c.input === 'string' ? c.input : JSON.stringify(c.input || ''),
+      })
+    } else if (blockType === 'tool_result') {
+      blocks.push({
+        type: 'tool_result',
+        toolUseId: (c.tool_use_id as string) || '',
+        content: typeof c.content === 'string' ? c.content : JSON.stringify(c.content || ''),
+      })
+    }
+  }
+  return blocks
+}
+
 function handleStreamEvent(
   event: unknown,
   set: (partial: Partial<ChatStore>) => void,
@@ -208,25 +235,50 @@ function handleStreamEvent(
 ) {
   if (!event) return
   const raw = event as Record<string, unknown>
-
   const eventType = raw.type as string
 
+  // claude CLI stream-json 格式：assistant 事件包含 message.content 数组
   if (eventType === 'assistant') {
-    set({ stream: { currentBlocks: [], blockIndex: -1 } })
-    return
-  }
-
-  if (eventType !== 'content_block_start' &&
-      eventType !== 'content_block_delta' &&
-      eventType !== 'content_block_stop' &&
-      eventType !== 'result') {
-
-    if (raw.type === 'stream_event') {
-      handleStreamEvent(raw.event, set, get)
+    const message = raw.message as Record<string, unknown> | undefined
+    if (message) {
+      const content = message.content as unknown[] | undefined
+      if (content && Array.isArray(content) && content.length > 0) {
+        const newBlocks = parseContentBlocks(content)
+        if (newBlocks.length > 0) {
+          const { stream } = get()
+          const merged = [...stream.currentBlocks, ...newBlocks]
+          set({ stream: { currentBlocks: merged, blockIndex: merged.length - 1 } })
+        }
+      }
     }
     return
   }
 
+  // system/init 事件不需要处理
+  if (eventType === 'system') return
+
+  // Anthropic API 原生流式格式（content_block_start/delta/stop）
+  if (eventType === 'content_block_start' ||
+      eventType === 'content_block_delta' ||
+      eventType === 'content_block_stop' ||
+      eventType === 'result') {
+    handleAnthropicStreamEvent(raw, eventType, set, get)
+    return
+  }
+
+  // stream_event 包装器（某些 claude CLI 版本使用此格式）
+  if (eventType === 'stream_event') {
+    handleStreamEvent(raw.event, set, get)
+    return
+  }
+}
+
+function handleAnthropicStreamEvent(
+  raw: Record<string, unknown>,
+  eventType: string,
+  set: (partial: Partial<ChatStore>) => void,
+  get: () => ChatStore,
+) {
   const { stream } = get()
   const blocks = [...stream.currentBlocks]
 

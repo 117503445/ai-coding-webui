@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -65,11 +66,6 @@ func (m *ClaudeManager) Abort() bool {
 	return false
 }
 
-// StreamEvent is a parsed line from claude's stream-json output.
-type StreamEvent struct {
-	Raw json.RawMessage
-}
-
 // Run spawns a claude CLI process and streams events to the callback.
 // sessionID can be empty for a new session.
 func (m *ClaudeManager) Run(ctx context.Context, message string, sessionID string, onEvent func(eventJSON json.RawMessage), onComplete func(sid string, err error)) {
@@ -83,24 +79,21 @@ func (m *ClaudeManager) Run(ctx context.Context, message string, sessionID strin
 	runCtx, cancel := context.WithCancel(ctx)
 	m.cancel = cancel
 	m.status = "working"
-	m.detail = "starting claude..."
+	m.detail = "启动 claude..."
 	m.mu.Unlock()
 
 	go func() {
-		defer func() {
-			m.mu.Lock()
-			m.status = "idle"
-			m.detail = ""
-			m.cancel = nil
-			m.mu.Unlock()
-		}()
-
 		sid, err := m.runClaude(runCtx, message, sessionID, onEvent)
+
+		m.mu.Lock()
 		if sid != "" {
-			m.mu.Lock()
 			m.sessionID = sid
-			m.mu.Unlock()
 		}
+		m.status = "idle"
+		m.detail = ""
+		m.cancel = nil
+		m.mu.Unlock()
+
 		onComplete(sid, err)
 	}()
 }
@@ -116,27 +109,52 @@ func (m *ClaudeManager) runClaude(ctx context.Context, message string, sessionID
 		args = append(args, "--resume", sessionID)
 	}
 
+	log.Ctx(ctx).Info().
+		Str("workDir", m.workDir).
+		Strs("args", args).
+		Str("sessionID", sessionID).
+		Msg("启动 claude CLI 子进程")
+
 	cmd := exec.CommandContext(ctx, "claude", args...)
 	cmd.Dir = m.workDir
 	cmd.Env = os.Environ()
+	cmd.Stdin = nil // 不连接 stdin，避免 claude CLI 等待 TTY 输入导致挂起
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("创建 stdout pipe 失败")
 		return "", fmt.Errorf("stdout pipe: %w", err)
 	}
 
-	cmd.Stderr = os.Stderr
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("创建 stderr pipe 失败")
+		return "", fmt.Errorf("stderr pipe: %w", err)
+	}
 
 	if err := cmd.Start(); err != nil {
+		log.Ctx(ctx).Error().Err(err).Msg("启动 claude 进程失败")
 		return "", fmt.Errorf("start claude: %w", err)
 	}
 
+	log.Ctx(ctx).Info().Int("pid", cmd.Process.Pid).Msg("claude 进程已启动")
+
+	// 在后台消费 stderr，避免管道缓冲区满导致子进程阻塞
+	go func() {
+		stderrScanner := bufio.NewScanner(stderrPipe)
+		stderrScanner.Buffer(make([]byte, 0, 64*1024), 256*1024)
+		for stderrScanner.Scan() {
+			log.Ctx(ctx).Debug().Str("src", "claude-stderr").Msg(stderrScanner.Text())
+		}
+	}()
+
 	m.mu.Lock()
 	m.cmd = cmd
-	m.detail = "processing..."
+	m.detail = "处理中..."
 	m.mu.Unlock()
 
 	var resultSessionID string
+	lineCount := 0
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
 
@@ -145,12 +163,19 @@ func (m *ClaudeManager) runClaude(ctx context.Context, message string, sessionID
 		if len(line) == 0 {
 			continue
 		}
+		lineCount++
+
+		log.Ctx(ctx).Trace().
+			Int("line", lineCount).
+			Int("bytes", len(line)).
+			Msg("收到 claude stdout 行")
 
 		onEvent(json.RawMessage(append([]byte(nil), line...)))
 
 		sid := extractSessionID(line)
 		if sid != "" {
 			resultSessionID = sid
+			log.Ctx(ctx).Debug().Str("sessionID", sid).Msg("提取到 session_id")
 		}
 
 		detail := extractDetail(line)
@@ -158,11 +183,12 @@ func (m *ClaudeManager) runClaude(ctx context.Context, message string, sessionID
 			m.mu.Lock()
 			m.detail = detail
 			m.mu.Unlock()
+			log.Ctx(ctx).Debug().Str("detail", detail).Msg("更新工作详情")
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Warn().Err(err).Msg("scanner error")
+		log.Ctx(ctx).Warn().Err(err).Msg("scanner 读取错误")
 	}
 
 	waitErr := cmd.Wait()
@@ -172,7 +198,17 @@ func (m *ClaudeManager) runClaude(ctx context.Context, message string, sessionID
 	m.mu.Unlock()
 
 	if ctx.Err() != nil {
+		log.Ctx(ctx).Info().Int("lines", lineCount).Msg("claude 进程被终止 (abort)")
 		return resultSessionID, fmt.Errorf("aborted")
+	}
+
+	if waitErr != nil {
+		log.Ctx(ctx).Warn().Err(waitErr).Int("lines", lineCount).Msg("claude 进程退出异常")
+	} else {
+		log.Ctx(ctx).Info().
+			Int("lines", lineCount).
+			Str("sessionID", resultSessionID).
+			Msg("claude 进程正常完成")
 	}
 
 	return resultSessionID, waitErr
@@ -206,16 +242,34 @@ func extractDetail(line []byte) string {
 	if obj.Type == "stream_event" && obj.Event.Type == "content_block_start" {
 		switch obj.Event.ContentBlock.Type {
 		case "thinking":
-			return "thinking..."
+			return "思考中..."
 		case "text":
-			return "writing..."
+			return "撰写中..."
 		case "tool_use":
 			name := obj.Event.ContentBlock.Name
 			if name != "" {
-				return "using tool: " + name
+				return "使用工具: " + name
 			}
-			return "using tool..."
+			return "使用工具..."
 		}
 	}
+
+	// 顶层事件类型也做详情提示
+	var topLevel struct {
+		Type    string `json:"type"`
+		Subtype string `json:"subtype"`
+	}
+	if json.Unmarshal(line, &topLevel) == nil {
+		switch topLevel.Type {
+		case "system":
+			return "初始化..."
+		case "result":
+			if topLevel.Subtype == "success" {
+				return "完成"
+			}
+			return "结果: " + strings.TrimPrefix(topLevel.Subtype, "")
+		}
+	}
+
 	return ""
 }

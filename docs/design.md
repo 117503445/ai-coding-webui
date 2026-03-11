@@ -1,53 +1,50 @@
-# Claude Code WebUI - Architecture Design
+# Claude Code WebUI - 架构设计
 
-## Overview
+## 概述
 
-A web-based UI for Claude Code that provides streaming chat with thinking process
-visibility, tool call details, and session persistence. The backend is fully stateless;
-all conversation history is managed by Claude Code's built-in session storage
-(`~/.claude/projects/`).
+基于 Web 的 Claude Code 界面，提供流式聊天、思考过程可见性、工具调用详情和会话持久化。
+后端完全无状态，所有对话历史由 Claude Code 的内置会话存储 (`~/.claude/projects/`) 管理。
 
-## System Architecture
+## 系统架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          Browser (React)                           │
+│                        浏览器 (React)                               │
 │                                                                     │
 │  ┌──────────┐  ┌──────────────┐  ┌───────────┐  ┌───────────────┐ │
-│  │InputArea  │  │ MessageList  │  │ StatusBar │  │ localStorage  │ │
-│  │(slash cmd)│  │ (streaming)  │  │(conn/work)│  │(session cache)│ │
+│  │ 输入区域  │  │   消息列表   │  │  状态栏   │  │ localStorage  │ │
+│  │(斜杠命令)│  │  (流式渲染)  │  │(连接/工作)│  │ (会话缓存)    │ │
 │  └─────┬────┘  └──────▲───────┘  └─────▲─────┘  └───────▲───────┘ │
 │        │               │               │                 │         │
 │        ▼               │               │                 │         │
 │  ┌─────────────────────┴───────────────┴─────────────────┘       │ │
-│  │              zustand Store (chatStore + connectionStore)       │ │
+│  │              zustand Store (chatStore)                         │ │
 │  └─────────────────────┬─────────────────────────────────────────┘ │
 │                        │                                           │
 │              ┌─────────▼─────────┐                                 │
-│              │  WebSocket Client │                                 │
-│              │ (expo. backoff    │                                 │
-│              │  reconnect)       │                                 │
+│              │  WebSocket 客户端 │                                 │
+│              │  (指数退避重连)   │                                 │
 │              └─────────┬─────────┘                                 │
 └────────────────────────┼───────────────────────────────────────────┘
                          │ ws://host:8080/ws
                          │
 ┌────────────────────────┼───────────────────────────────────────────┐
-│                  Go Backend (:8080)  [STATELESS]                   │
+│               Go 后端 (:8080)  [完全无状态]                        │
 │                        │                                           │
 │              ┌─────────▼─────────┐                                 │
-│              │  WebSocket Handler │◄──── coder/websocket           │
+│              │  WebSocket 处理器 │◄──── coder/websocket             │
 │              │  (cmd/rpc/ws.go)  │                                 │
 │              └─────────┬─────────┘                                 │
 │                        │                                           │
 │              ┌─────────▼─────────┐       ┌──────────────────────┐ │
-│              │  Claude Manager   │       │  Connect RPC Handler │ │
+│              │  Claude 进程管理  │       │  Connect RPC 处理器  │ │
 │              │  (cmd/rpc/claude  │       │  (Healthz, GetStatus │ │
 │              │   .go)            │       │   Abort)             │ │
 │              └─────────┬─────────┘       └──────────────────────┘ │
 │                        │                                           │
 │              ┌─────────▼─────────┐       ┌──────────────────────┐ │
-│              │  os/exec spawn    │       │  go:embed frontend   │ │
-│              │  claude CLI       │       │  (SPA fallback)      │ │
+│              │  os/exec 启动     │       │  go:embed 前端资源   │ │
+│              │  claude CLI 子进程│       │  (SPA fallback)      │ │
 │              └─────────┬─────────┘       └──────────────────────┘ │
 └────────────────────────┼───────────────────────────────────────────┘
                          │
@@ -71,37 +68,37 @@ all conversation history is managed by Claude Code's built-in session storage
               └─────────────────────┘
 ```
 
-## Communication Protocol
+## 通信协议
 
-### WebSocket Messages (JSON over ws://host:8080/ws)
+### WebSocket 消息 (JSON, ws://host:8080/ws)
 
-#### Frontend -> Backend
+#### 前端 -> 后端
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  { "type": "chat",    "content": "user message", │
+│  { "type": "chat",    "content": "用户消息",      │
 │    "session_id": "abc-123" }                     │
-│  -- send chat message, resume session if id set  │
+│  -- 发送聊天消息，若有 session_id 则续接会话       │
 ├──────────────────────────────────────────────────┤
 │  { "type": "command", "command": "/new" }        │
-│  -- execute slash command                        │
+│  -- 执行斜杠命令                                  │
 ├──────────────────────────────────────────────────┤
 │  { "type": "abort" }                             │
-│  -- kill current claude process                  │
+│  -- 终止当前 claude 进程                           │
 └──────────────────────────────────────────────────┘
 ```
 
-#### Backend -> Frontend
+#### 后端 -> 前端
 
 ```
 ┌──────────────────────────────────────────────────┐
 │  { "type": "status",                             │
 │    "status": "idle" | "working",                 │
-│    "detail": "thinking..." }                     │
+│    "detail": "思考中..." }                        │
 ├──────────────────────────────────────────────────┤
 │  { "type": "stream",                             │
-│    "event": { <claude stream-json event> } }     │
-│  -- forwarded from claude CLI stdout             │
+│    "event": { <claude stream-json 事件> } }      │
+│  -- 从 claude CLI stdout 转发                     │
 ├──────────────────────────────────────────────────┤
 │  { "type": "complete",                           │
 │    "session_id": "abc-123",                      │
@@ -115,128 +112,128 @@ all conversation history is managed by Claude Code's built-in session storage
 
 ```
 ClaudeService {
-  Healthz()   -> version, uptime
+  Healthz()   -> 版本信息, 运行时间
   GetStatus() -> idle/working, session_id
-  Abort()     -> success/fail
+  Abort()     -> 成功/失败
 }
 ```
 
-## Multi-turn Chat Flow
+## 多轮对话流程
 
 ```
-  Frontend                  Backend                   claude CLI
-     │                         │                          │
-     │── chat(msg1) ──────────>│                          │
-     │                         │── spawn: claude -p msg1  │
-     │                         │   --stream-json          │
-     │                         │   --verbose ────────────>│
-     │                         │                          │
-     │<── stream(event) ──────-│<── stdout line ──────────│
-     │<── stream(event) ──────-│<── stdout line ──────────│
-     │<── complete(sid=X) ────-│<── exit 0 ───────────────│
-     │                         │                          │
-     │  [stores sid=X in       │                          │
-     │   localStorage]         │                          │
-     │                         │                          │
-     │── chat(msg2, sid=X) ──->│                          │
-     │                         │── spawn: claude -p msg2  │
-     │                         │   --resume X             │
-     │                         │   --stream-json ────────>│
-     │                         │                          │
-     │<── stream(event) ──────-│<── stdout line ──────────│
-     │<── complete(sid=X) ────-│<── exit 0 ───────────────│
-     │                         │                          │
+  前端                      后端                      claude CLI
+   │                         │                          │
+   │── chat(msg1) ──────────>│                          │
+   │                         │── 启动: claude -p msg1   │
+   │                         │   --stream-json          │
+   │                         │   --verbose ────────────>│
+   │                         │                          │
+   │<── stream(event) ──────-│<── stdout 逐行 ──────────│
+   │<── stream(event) ──────-│<── stdout 逐行 ──────────│
+   │<── complete(sid=X) ────-│<── exit 0 ───────────────│
+   │                         │                          │
+   │  [将 sid=X 存入         │                          │
+   │   localStorage]         │                          │
+   │                         │                          │
+   │── chat(msg2, sid=X) ──->│                          │
+   │                         │── 启动: claude -p msg2   │
+   │                         │   --resume X             │
+   │                         │   --stream-json ────────>│
+   │                         │                          │
+   │<── stream(event) ──────-│<── stdout 逐行 ──────────│
+   │<── complete(sid=X) ────-│<── exit 0 ───────────────│
+   │                         │                          │
 ```
 
-## Session Persistence
+## 会话持久化
 
 ```
 ┌─────────────┐    ┌──────────────────┐    ┌─────────────────────┐
-│  Frontend   │    │    Backend       │    │  ~/.claude/projects  │
-│             │    │  (stateless)     │    │                     │
-│ localStorage│    │                  │    │  sessions managed   │
-│  - session  │    │  reads nothing   │    │  by claude CLI      │
-│    _id      │    │  stores nothing  │    │  automatically      │
-│  - messages │    │                  │    │                     │
-│    (cache)  │    │  just relays     │    │  --resume uses      │
-│             │    │  between browser │    │  these files        │
-│             │    │  and claude CLI  │    │                     │
+│    前端      │    │     后端          │    │  ~/.claude/projects  │
+│             │    │  (完全无状态)     │    │                     │
+│ localStorage│    │                  │    │  会话由 claude CLI   │
+│  - session  │    │  不读取任何数据   │    │  自动管理            │
+│    _id      │    │  不存储任何数据   │    │                     │
+│  - messages │    │                  │    │  --resume 使用       │
+│    (缓存)   │    │  仅在浏览器和     │    │  这些文件            │
+│             │    │  claude CLI 间    │    │                     │
+│             │    │  中继消息         │    │                     │
 └──────┬──────┘    └──────────────────┘    └──────────┬──────────┘
        │                                              │
-       │  On page refresh:                            │
-       │  1. Load messages from localStorage          │
-       │  2. Reconnect WebSocket                      │
-       │  3. Next chat uses --resume <session_id>     │
-       │     which reads from ─────────────────────>  │
+       │  页面刷新时:                                  │
+       │  1. 从 localStorage 加载消息                  │
+       │  2. 重新连接 WebSocket                        │
+       │  3. 下次聊天使用 --resume <session_id>        │
+       │     读取 ─────────────────────────────────>  │
        └──────────────────────────────────────────────┘
 ```
 
-## Build Pipeline
+## 构建流水线
 
 ```
   ┌──────────────┐     ┌───────────────────┐     ┌─────────────────┐
-  │ 1. pnpm build│────>│ 2. cp fe/dist ->  │────>│ 3. go build     │
-  │    (fe/)     │     │ cmd/rpc/          │     │    ./cmd/rpc    │
-  │              │     │ frontend_dist/    │     │    (with embed) │
+  │ 1. pnpm build│────>│ 2. 复制 fe/dist   │────>│ 3. go build     │
+  │    (fe/)     │     │ 到 cmd/rpc/       │     │    ./cmd/rpc    │
+  │              │     │ frontend_dist/    │     │    (含 embed)   │
   └──────────────┘     └───────────────────┘     └────────┬────────┘
                                                           │
                                                   ┌───────▼───────┐
                                                   │ data/rpc/rpc  │
-                                                  │ (single bin)  │
+                                                  │ (单一二进制)   │
                                                   └───────────────┘
 ```
 
-## Frontend Component Tree
+## 前端组件树
 
 ```
 App
  └─ ChatContainer
-     ├─ StatusBar
-     │   ├─ Logo + Title
-     │   ├─ ConnectionIndicator (spinner on disconnect)
-     │   └─ WorkingStatus (pulse animation when busy)
+     ├─ StatusBar (状态栏)
+     │   ├─ Logo + 标题
+     │   ├─ ConnectionIndicator (断连时转圈)
+     │   └─ WorkingStatus (工作时脉冲动画)
      │
-     ├─ MessageList
-     │   └─ MessageItem (per message)
-     │       ├─ ThinkingBlock (collapsible, italic)
-     │       ├─ ToolCallBlock (card, expandable)
-     │       └─ MarkdownRenderer (with copy button)
+     ├─ MessageList (消息列表)
+     │   └─ MessageItem (单条消息)
+     │       ├─ ThinkingBlock (可折叠, 斜体)
+     │       ├─ ToolCallBlock (卡片, 可展开)
+     │       └─ MarkdownRenderer (含复制按钮)
      │
-     ├─ ConnectionOverlay (fullscreen on disconnect)
+     ├─ ConnectionOverlay (断连时全屏遮罩)
      │
-     └─ InputArea
-         ├─ TextArea (Shift+Enter newline, Enter send)
-         ├─ SlashCommandMenu (popup on "/" prefix)
-         └─ SendButton / AbortButton (toggle by state)
+     └─ InputArea (输入区域)
+         ├─ TextArea (Shift+Enter 换行, Enter 发送)
+         ├─ SlashCommandMenu (输入 "/" 弹出)
+         └─ SendButton / AbortButton (按状态切换)
 ```
 
-## Slash Commands
+## 斜杠命令
 
-| Command    | Action                                      |
+| 命令       | 功能                                        |
 |------------|---------------------------------------------|
-| `/new`     | Clear messages, reset session_id, new chat  |
-| `/compact` | Send compact request to claude CLI          |
-| `/cost`    | Show token usage (from claude response)     |
-| `/clear`   | Same as /new                                |
-| `/help`    | Show available commands                     |
+| `/new`     | 清除消息，重置 session_id，开始新对话        |
+| `/compact` | 发送压缩上下文请求到 claude CLI              |
+| `/cost`    | 显示 token 用量（来自 claude 响应）          |
+| `/clear`   | 同 /new                                     |
+| `/help`    | 显示可用命令                                 |
 
-## E2E Test Architecture
+## E2E 测试架构
 
 ```
   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-  │  main.py     │────>│  Playwright  │────>│  Browser     │
-  │  test runner │     │  (chromium)  │     │  (localhost)  │
+  │  main.py     │────>│  Playwright  │────>│    浏览器     │
+  │  测试运行器  │     │  (chromium)  │     │  (localhost)  │
   └──────┬───────┘     └──────────────┘     └──────┬───────┘
          │                                         │
-         │  Manages:                               │  Tests against:
-         │  - Start/stop backend                   │  - Chat UI
-         │  - Screenshot each step                 │  - WebSocket msgs
-         │  - Collect trace.zip                    │  - Slash commands
-         │  - Write test.log                       │  - Session persist
+         │  管理:                                   │  测试:
+         │  - 启动/停止后端                         │  - 聊天界面
+         │  - 每步截图                              │  - WebSocket 消息
+         │  - 收集 trace.zip                        │  - 斜杠命令
+         │  - 写入 test.log                         │  - 会话持久化
          │                                         │
          ▼                                         ▼
   data/e2e/cases/                          localhost:8080
-    YYYYMMDD-HHMMSS-casename/              (Go backend)
+    YYYYMMDD-HHMMSS-casename/              (Go 后端)
       screenshots/
       logs/
         trace.zip

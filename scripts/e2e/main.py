@@ -63,19 +63,27 @@ def setup_logger(log_file: Path) -> logging.Logger:
     return logger
 
 
-def start_backend(logger: logging.Logger) -> subprocess.Popen:
+def start_backend(logger: logging.Logger, out_dir: Path | None = None) -> subprocess.Popen:
     """Start the backend server process."""
     env = os.environ.copy()
     env["PORT"] = BACKEND_PORT
 
     logger.info(f"Starting backend on port {BACKEND_PORT}...")
+    log_path = (out_dir / "logs" / "backend.log") if out_dir else None
+    if log_path:
+        log_file = open(log_path, "w")
+    else:
+        log_file = open(os.devnull, "w")
+
     proc = subprocess.Popen(
         [str(BACKEND_BIN)],
         cwd=str(PROJECT_ROOT),
         env=env,
-        stdout=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        stdout=log_file,
         stderr=subprocess.STDOUT,
     )
+    proc._backend_log_file = log_file  # type: ignore[attr-defined]
     return proc
 
 
@@ -114,6 +122,8 @@ def stop_backend(proc: subprocess.Popen, logger: logging.Logger):
             proc.kill()
             proc.wait()
         logger.info("Backend stopped")
+    if hasattr(proc, "_backend_log_file"):
+        proc._backend_log_file.close()  # type: ignore[attr-defined]
 
 
 def run_case(case_name: str, module_path: Path) -> bool:
@@ -123,7 +133,7 @@ def run_case(case_name: str, module_path: Path) -> bool:
 
     logger.info(f"=== Running test case: {case_name} ===")
 
-    backend_proc = start_backend(logger)
+    backend_proc = start_backend(logger, out_dir)
     try:
         if not wait_for_backend(logger):
             logger.error("Backend not ready, skipping test")
